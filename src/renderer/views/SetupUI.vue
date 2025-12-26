@@ -1,4 +1,24 @@
 <template>
+    <dialog
+        ref="prerequisitesWarningDialog"
+        class="backdrop:bg-black/50 backdrop:backdrop-blur-sm rounded-xl bg-[#1F1F1F] p-8 max-w-md"
+    >
+        <h3 class="text-xl font-semibold text-white mb-4">⚠️ Prerequisites Not Met</h3>
+        <p class="text-gray-300 mb-4">
+            Some system requirements are not satisfied. Continuing without meeting the prerequisites may cause WinBoat
+            to not function properly or fail during installation.
+        </p>
+        <p class="text-gray-300 mb-6">Are you sure you want to continue anyway?</p>
+        <div class="flex flex-row gap-4 justify-end">
+            <x-button @click="closePrerequisitesWarningDialog">
+                <x-label>Cancel</x-label>
+            </x-button>
+            <x-button toggled @click="continueAnywayFromPrerequisites">
+                <x-label>Continue Anyway</x-label>
+            </x-button>
+        </div>
+    </dialog>
+
     <div class="relative size-full p-16 overflow-hidden">
         <div class="size-full rounded-3xl bg-[#1F1F1F] shadow-lg shadow-black/50 gap-4 p-5 grid grid-cols-2">
             <div>
@@ -242,12 +262,19 @@
                         <div class="flex flex-row gap-4 mt-6">
                             <x-button class="px-6" @click="currentStepIdx--">Back</x-button>
                             <x-button
+                                v-if="satisfiesPrequisites(specs, containerSpecs)"
                                 toggled
                                 class="px-6"
                                 @click="currentStepIdx++"
-                                :disabled="!satisfiesPrequisites(specs, containerSpecs)"
                             >
                                 Next
+                            </x-button>
+                            <x-button
+                                v-else
+                                class="px-6 !bg-orange-600 !text-white hover:!bg-orange-700"
+                                @click="showPrerequisitesWarningDialog"
+                            >
+                                Continue Anyway
                             </x-button>
                         </div>
                     </div>
@@ -712,11 +739,14 @@
                             <span v-else>
                                 over at
                                 <div
-                                    style="animation-duration: 3s!important;"
+                                    style="animation-duration: 3s !important"
                                     class="ml-1 inline-block relative text-transparent rounded-md bg-neutral-700 animate-pulse select-none"
                                 >
                                     in your browser
-                                    <Icon icon="eos-icons:three-dots-loading" class="pointer-events-none absolute top-0 left-[50%] size-16 text-violet-400 -translate-x-[50%] -translate-y-[27.5%]"></Icon>
+                                    <Icon
+                                        icon="eos-icons:three-dots-loading"
+                                        class="pointer-events-none absolute top-0 left-[50%] size-16 text-violet-400 -translate-x-[50%] -translate-y-[27.5%]"
+                                    ></Icon>
                                 </div>
                             </span>
                         </p>
@@ -783,7 +813,7 @@
 
 <script setup lang="ts">
 import { Icon } from "@iconify/vue";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 import { useRouter } from "vue-router";
 import { computedAsync } from "@vueuse/core";
 import { InstallConfiguration, Specs } from "../../types";
@@ -792,12 +822,7 @@ import { WINDOWS_VERSIONS, WINDOWS_LANGUAGES, type WindowsVersionKey } from "../
 import { InstallManager, InstallStates } from "../lib/install";
 import { openAnchorLink } from "../utils/openLink";
 import license from "../assets/LICENSE.txt?raw";
-import {
-    ContainerRuntimes,
-    DockerSpecs,
-    PodmanSpecs,
-    getContainerSpecs,
-} from "../lib/containers/common";
+import { ContainerRuntimes, DockerSpecs, PodmanSpecs, getContainerSpecs } from "../lib/containers/common";
 import { WinboatConfig } from "../lib/config";
 
 const path: typeof import("path") = require("node:path");
@@ -910,7 +935,13 @@ const preinstallMsg = ref("");
 const containerRuntime = ref(ContainerRuntimes.DOCKER);
 const vncPort = ref(8006);
 // These are the install steps where the container is actually up and running
-const linkableInstallSteps = [ InstallStates.MONITORING_PREINSTALL, InstallStates.INSTALLING_WINDOWS, InstallStates.COMPLETED ];
+const linkableInstallSteps = [
+    InstallStates.MONITORING_PREINSTALL,
+    InstallStates.INSTALLING_WINDOWS,
+    InstallStates.COMPLETED,
+];
+
+const prerequisitesWarningDialog = useTemplateRef("prerequisitesWarningDialog");
 
 let installManager: InstallManager | null;
 
@@ -1105,6 +1136,19 @@ function install() {
     });
 
     installManager.install();
+}
+
+function showPrerequisitesWarningDialog() {
+    prerequisitesWarningDialog.value?.showModal();
+}
+
+function closePrerequisitesWarningDialog() {
+    prerequisitesWarningDialog.value?.close();
+}
+
+function continueAnywayFromPrerequisites() {
+    closePrerequisitesWarningDialog();
+    currentStepIdx.value++;
 }
 </script>
 
