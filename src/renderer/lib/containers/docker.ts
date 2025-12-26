@@ -176,7 +176,7 @@ export class DockerContainer extends ContainerManager {
                 if (versionMatch) {
                     const majorVersion = Number.parseInt(versionMatch[1].split(".")[0], 10);
                     specs.dockerComposeInstalled = majorVersion >= 2;
-                } else if (dockerComposeOutput.includes("dev")) {
+                } else if (/version\s+(dev|v?dev)\b/i.test(dockerComposeOutput)) {
                     // Development builds are assumed to be v2+
                     specs.dockerComposeInstalled = true;
                 } else {
